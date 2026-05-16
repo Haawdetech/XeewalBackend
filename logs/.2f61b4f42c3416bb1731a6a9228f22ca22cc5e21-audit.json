@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/Users/mac/Desktop/SiteVente/backend/logs/.2f61b4f42c3416bb1731a6a9228f22ca22cc5e21-audit.json",
+    "files": [
+        {
+            "date": 1778891684663,
+            "name": "/Users/mac/Desktop/SiteVente/backend/logs/error-2026-05-16.log",
+            "hash": "ce92a6b32975a6db443cbb0e049b516ff297c499a5dd51909ddd4782d112090c"
+        }
+    ],
+    "hashType": "sha256"
+}
