@@ -5,6 +5,8 @@ const Coupon = require("../Models/Coupon");
 const Shipping = require("../Models/Shipping");
 const Notification = require("../Models/Notification");
 const paydunya = require("../Services/paydunya");
+const mailer = require("../Services/mailer");
+const User = require("../Models/User");
 const logger = require("../utils/logger");
 const { isValidObjectId, parsePagination, safeRegex, isValidEmail, isValidPhone } = require("../utils/validate");
 
@@ -63,6 +65,12 @@ exports.createOrder = async (req, res) => {
       await order.save();
       await Cart.findOneAndUpdate({ user: req.user.id }, { items: [], coupon: null, couponDiscount: 0 });
       if (cart.coupon) await Coupon.findByIdAndUpdate(cart.coupon, { $inc: { usedCount: 1 }, $push: { usedBy: req.user.id } });
+      // Emails
+      const userDoc = await User.findById(req.user.id).select("email firstName lastName");
+      if (userDoc) {
+        mailer.sendOrderConfirmation(userDoc.email, userDoc.firstName, order);
+        mailer.sendAdminNewOrder(order, `${userDoc.firstName} ${userDoc.lastName}`, userDoc.email);
+      }
       logger.info("Commande PayDunya créée", { orderId: order._id, userId: req.user.id });
       return res.status(201).json({ order, paymentUrl: invoice.url });
     }
@@ -76,6 +84,12 @@ exports.createOrder = async (req, res) => {
     }
 
     await Notification.create({ user: req.user.id, title: "Commande reçue", message: `Votre commande #${order.orderNumber} a été reçue`, type: "order", link: `/orders/${order._id}` });
+    // Emails
+    const userDoc = await User.findById(req.user.id).select("email firstName lastName");
+    if (userDoc) {
+      mailer.sendOrderConfirmation(userDoc.email, userDoc.firstName, order);
+      mailer.sendAdminNewOrder(order, `${userDoc.firstName} ${userDoc.lastName}`, userDoc.email);
+    }
     logger.info("Commande COD créée", { orderId: order._id, userId: req.user.id });
     res.status(201).json({ order });
   } catch (err) {
@@ -186,6 +200,8 @@ exports.createGuestOrder = async (req, res) => {
         const invoice = await paydunya.createOrderInvoice(order, guestUser);
         order.invoiceToken = invoice.token;
         await order.save();
+        mailer.sendOrderConfirmation(email, firstName, order);
+        mailer.sendAdminNewOrder(order, `${firstName} ${lastName}`, email);
         logger.info("Commande guest PayDunya créée", { orderId: order._id, email });
         return res.status(201).json({ order, paymentUrl: invoice.url });
       } catch (payErr) {
@@ -194,6 +210,8 @@ exports.createGuestOrder = async (req, res) => {
       }
     }
 
+    mailer.sendOrderConfirmation(email, firstName, order);
+    mailer.sendAdminNewOrder(order, `${firstName} ${lastName}`, email);
     logger.info("Commande guest COD créée", { orderId: order._id, email });
     res.status(201).json({ order });
   } catch (err) {
@@ -229,6 +247,10 @@ exports.ipnCallback = async (req, res) => {
       logger.info("Paiement IPN confirmé", { orderId: order._id, orderNumber: order.orderNumber });
       if (order.user) {
         await Notification.create({ user: order.user, title: "Paiement confirmé", message: `Votre commande #${order.orderNumber} est en cours de traitement`, type: "payment", link: `/orders/${order._id}` });
+        const userDoc = await User.findById(order.user).select("email firstName lastName");
+        if (userDoc) mailer.sendOrderStatusUpdate(userDoc.email, userDoc.firstName, order);
+      } else if (order.guestInfo?.email) {
+        mailer.sendOrderStatusUpdate(order.guestInfo.email, order.guestInfo.firstName, order);
       }
     }
     res.json({ message: "OK" });
@@ -303,6 +325,9 @@ exports.updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ message: "Commande introuvable" });
     if (order.user) {
       await Notification.create({ user: order.user._id, title: "Statut commande mis à jour", message: `Commande #${order.orderNumber} : ${status}`, type: "order", link: `/orders/${order._id}` });
+      mailer.sendOrderStatusUpdate(order.user.email, order.user.firstName, order);
+    } else if (order.guestInfo?.email) {
+      mailer.sendOrderStatusUpdate(order.guestInfo.email, order.guestInfo.firstName, order);
     }
     logger.info("Statut commande mis à jour", { orderId: order._id, status, adminId: req.user.id });
     res.json(order);

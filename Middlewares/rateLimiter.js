@@ -48,4 +48,11 @@ const adminWriteLimiter = rateLimit({
   message: { message: "Trop de requêtes admin, veuillez patienter." },
 });
 
-module.exports = { globalLimiter, authLimiter, paymentLimiter, ipnLimiter, searchLimiter, couponLimiter, adminWriteLimiter };
+// Reset password : 5 tentatives / heure
+const resetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { message: "Trop de demandes de réinitialisation, réessayez dans 1 heure." },
+});
+
+module.exports = { globalLimiter, authLimiter, paymentLimiter, ipnLimiter, searchLimiter, couponLimiter, adminWriteLimiter, resetLimiter };

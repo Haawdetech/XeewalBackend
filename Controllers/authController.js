@@ -1,9 +1,11 @@
 const User = require("../Models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { getJwtSecret } = require("../Middlewares/VerifyToken");
 const logger = require("../utils/logger");
 const { isValidEmail } = require("../utils/validate");
+const mailer = require("../Services/mailer");
 
 const generateToken = (user) =>
   jwt.sign({ id: user._id, role: user.role, email: user.email }, getJwtSecret(), { expiresIn: "7d" });
@@ -152,6 +154,59 @@ exports.getWishlist = async (req, res) => {
     res.json(user.wishlist || []);
   } catch (err) {
     logger.error("Erreur getWishlist", { error: err.message });
+    res.status(500).json({ message: "Une erreur est survenue" });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !isValidEmail(email))
+      return res.status(400).json({ message: "Email invalide" });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    // Réponse générique pour ne pas révéler si l'email existe
+    if (!user || !user.password)
+      return res.json({ message: "Si cet email existe, un lien de réinitialisation vous a été envoyé." });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = crypto.createHash("sha256").update(token).digest("hex");
+    user.resetPasswordExpires = new Date(Date.now() + 3600 * 1000); // 1h
+    await user.save();
+
+    const resetUrl = `${process.env.FRONTEND_URL}/fr/auth/reset-password?token=${token}`;
+    await mailer.sendPasswordReset(user.email, user.firstName, resetUrl);
+    logger.info("Reset password demandé", { userId: user._id });
+    res.json({ message: "Si cet email existe, un lien de réinitialisation vous a été envoyé." });
+  } catch (err) {
+    logger.error("Erreur forgotPassword", { error: err.message });
+    res.status(500).json({ message: "Une erreur est survenue" });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password || password.length < 8)
+      return res.status(400).json({ message: "Token et mot de passe (8 caractères min) requis" });
+
+    const hashed = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      resetPasswordToken: hashed,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: "Lien invalide ou expiré. Faites une nouvelle demande." });
+
+    user.password = await bcrypt.hash(password, 12);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    logger.info("Mot de passe réinitialisé", { userId: user._id });
+    res.json({ message: "Mot de passe réinitialisé avec succès. Vous pouvez vous connecter." });
+  } catch (err) {
+    logger.error("Erreur resetPassword", { error: err.message });
     res.status(500).json({ message: "Une erreur est survenue" });
   }
 };

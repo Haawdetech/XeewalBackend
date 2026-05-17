@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { authenticateUser, adminRole } = require("../Middlewares/VerifyToken");
-const { authLimiter, paymentLimiter, ipnLimiter, searchLimiter, couponLimiter, adminWriteLimiter } = require("../Middlewares/rateLimiter");
+const { authLimiter, paymentLimiter, ipnLimiter, searchLimiter, couponLimiter, adminWriteLimiter, resetLimiter } = require("../Middlewares/rateLimiter");
 const { uploadProduct, uploadCategory, uploadAvatar } = require("../Middlewares/uploadS3");
 const passport = require("../Middlewares/googlePassport");
 
@@ -28,6 +28,8 @@ router.delete("/auth/address/:id", authenticateUser, authCtrl.deleteAddress);
 router.get("/auth/wishlist", authenticateUser, authCtrl.getWishlist);
 router.post("/auth/wishlist", authenticateUser, authCtrl.toggleWishlist);
 router.put("/auth/change-password", authenticateUser, authLimiter, authCtrl.updatePassword);
+router.post("/auth/forgot-password", resetLimiter, authCtrl.forgotPassword);
+router.post("/auth/reset-password", resetLimiter, authCtrl.resetPassword);
 
 // Google OAuth
 router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
