@@ -164,8 +164,9 @@ exports.forgotPassword = async (req, res) => {
     if (!email || !isValidEmail(email))
       return res.status(400).json({ message: "Email invalide" });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password");
     // Réponse générique pour ne pas révéler si l'email existe
+    // Pas de reset pour les comptes Google (pas de password)
     if (!user || !user.password)
       return res.json({ message: "Si cet email existe, un lien de réinitialisation vous a été envoyé." });
 
