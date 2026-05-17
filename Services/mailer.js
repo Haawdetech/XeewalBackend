@@ -1,15 +1,28 @@
 const nodemailer = require("nodemailer");
 const logger = require("../utils/logger");
 
-const createTransport = () =>
-  nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
+const createTransport = () => {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const secure = port === 465;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
 
-const FROM = `"Xeewal" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
+  console.log("\n📧 [MAILER] Config SMTP :");
+  console.log(`   HOST    : ${host || "❌ MANQUANT"}`);
+  console.log(`   PORT    : ${port} (secure=${secure})`);
+  console.log(`   USER    : ${user || "❌ MANQUANT"}`);
+  console.log(`   PASS    : ${pass ? "✅ défini (" + pass.length + " chars)" : "❌ MANQUANT"}`);
+
+  if (!host || !user || !pass) {
+    console.error("❌ [MAILER] Variables SMTP incomplètes — email non envoyé");
+    throw new Error("Variables SMTP manquantes");
+  }
+
+  return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+};
+
+const FROM = `"Xeewal" <${process.env.SMTP_USER}>`;
 
 const base = (content) => `
 <!DOCTYPE html>
@@ -69,12 +82,19 @@ const statusLabel = (s) => ({
 }[s] || { label: s, color: "#6B7280", bg: "#F3F4F6" });
 
 async function send(to, subject, html) {
+  console.log(`\n📤 [MAILER] Tentative envoi → ${to} | ${subject}`);
   try {
     const t = createTransport();
-    await t.sendMail({ from: FROM, to, subject, html });
-    logger.info("Email envoyé", { to, subject });
+    console.log("   🔌 Connexion SMTP en cours...");
+    const info = await t.sendMail({ from: FROM, to, subject, html });
+    console.log(`   ✅ Email envoyé ! MessageId: ${info.messageId}`);
+    logger.info("Email envoyé", { to, subject, messageId: info.messageId });
   } catch (err) {
-    logger.error("Erreur envoi email", { to, subject, error: err.message });
+    console.error(`   ❌ ÉCHEC envoi email`);
+    console.error(`   Code    : ${err.code || "inconnu"}`);
+    console.error(`   Message : ${err.message}`);
+    if (err.response) console.error(`   Réponse SMTP : ${err.response}`);
+    logger.error("Erreur envoi email", { to, subject, error: err.message, code: err.code });
   }
 }
 
