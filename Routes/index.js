@@ -21,7 +21,7 @@ const adminUserCtrl = require("../Controllers/adminUserController");
 router.post("/auth/register", authLimiter, authCtrl.register);
 router.post("/auth/login", authLimiter, authCtrl.login);
 router.get("/auth/me", authenticateUser, authCtrl.getMe);
-router.put("/auth/profile", authenticateUser, uploadAvatar.single("avatar"), authCtrl.updateProfile);
+router.put("/auth/profile", authenticateUser, ...uploadAvatar.single("avatar"), authCtrl.updateProfile);
 router.put("/auth/password", authenticateUser, authLimiter, authCtrl.updatePassword);
 router.post("/auth/address", authenticateUser, authCtrl.addAddress);
 router.delete("/auth/address/:id", authenticateUser, authCtrl.deleteAddress);
@@ -36,8 +36,8 @@ router.get("/auth/google/callback", passport.authenticate("google", { session: f
 // ── Categories ────────────────────────────────────────────────────────────────
 router.get("/categories", categoryCtrl.getCategories);
 router.get("/categories/:slug", categoryCtrl.getCategoryBySlug);
-router.post("/admin/categories", authenticateUser, adminRole, adminWriteLimiter, uploadCategory.single("image"), categoryCtrl.createCategory);
-router.put("/admin/categories/:id", authenticateUser, adminRole, adminWriteLimiter, uploadCategory.single("image"), categoryCtrl.updateCategory);
+router.post("/admin/categories", authenticateUser, adminRole, adminWriteLimiter, ...uploadCategory.single("image"), categoryCtrl.createCategory);
+router.put("/admin/categories/:id", authenticateUser, adminRole, adminWriteLimiter, ...uploadCategory.single("image"), categoryCtrl.updateCategory);
 router.delete("/admin/categories/:id", authenticateUser, adminRole, adminWriteLimiter, categoryCtrl.deleteCategory);
 
 // ── Products ──────────────────────────────────────────────────────────────────
@@ -46,8 +46,8 @@ router.get("/admin/products", authenticateUser, adminRole, productCtrl.getAllPro
 router.get("/admin/products/:id", authenticateUser, adminRole, productCtrl.getProductById);
 router.get("/products/:slug", productCtrl.getProductBySlug);
 router.get("/products/:slug/related", productCtrl.getRelatedProducts);
-router.post("/admin/products", authenticateUser, adminRole, adminWriteLimiter, uploadProduct.array("images", 8), productCtrl.createProduct);
-router.put("/admin/products/:id", authenticateUser, adminRole, adminWriteLimiter, uploadProduct.array("images", 8), productCtrl.updateProduct);
+router.post("/admin/products", authenticateUser, adminRole, adminWriteLimiter, ...uploadProduct.array("images", 8), productCtrl.createProduct);
+router.put("/admin/products/:id", authenticateUser, adminRole, adminWriteLimiter, ...uploadProduct.array("images", 8), productCtrl.updateProduct);
 router.delete("/admin/products/:id", authenticateUser, adminRole, adminWriteLimiter, productCtrl.deleteProduct);
 
 // ── Cart ──────────────────────────────────────────────────────────────────────
