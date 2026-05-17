@@ -19,7 +19,13 @@ const createTransport = () => {
     throw new Error("Variables SMTP manquantes");
   }
 
-  return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false },
+  });
 };
 
 const FROM = `"Xeewal" <${process.env.SMTP_USER}>`;
