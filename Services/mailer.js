@@ -159,6 +159,9 @@ exports.sendOrderConfirmation = (to, firstName, order) => {
 exports.sendAdminNewOrder = (order, clientName, clientEmail) => {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return;
+  // Support multiple emails separated by commas
+  const recipients = adminEmail.split(",").map(e => e.trim()).filter(Boolean);
+  if (recipients.length === 0) return;
 
   const items = order.items.map(i => `
     <tr>
@@ -167,7 +170,8 @@ exports.sendAdminNewOrder = (order, clientName, clientEmail) => {
       <td style="text-align:right">${formatPrice(i.price * i.quantity)}</td>
     </tr>`).join("");
 
-  return send(adminEmail, `🛒 Nouvelle commande #${order.orderNumber} — ${formatPrice(order.total)}`, base(`
+  const subject = `🛒 Nouvelle commande #${order.orderNumber} — ${formatPrice(order.total)}`;
+  const html = base(`
     <h2>Nouvelle commande reçue !</h2>
     <p>Une nouvelle commande vient d'être passée sur Xeewal.</p>
 
@@ -201,7 +205,9 @@ exports.sendAdminNewOrder = (order, clientName, clientEmail) => {
     <div style="text-align:center;margin:24px 0">
       <a href="${process.env.FRONTEND_URL}/${process.env.ADMIN_LOCALE || "fr"}/admin/orders" class="btn">Voir dans l'administration →</a>
     </div>
-  `));
+  `);
+
+  return Promise.all(recipients.map(to => send(to, subject, html)));
 };
 
 /* ── Order status update (client) ───────────────────── */
