@@ -7,7 +7,16 @@ const { isValidObjectId } = require("../utils/validate");
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isActive: true }).sort({ order: 1, createdAt: 1 }).populate("parent", "name slug");
-    res.json(categories);
+    const counts = await Product.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]);
+    const countMap = Object.fromEntries(counts.map((c) => [String(c._id), c.count]));
+    const result = categories.map((cat) => ({
+      ...cat.toObject(),
+      productCount: countMap[String(cat._id)] || 0,
+    }));
+    res.json(result);
   } catch (err) {
     logger.error("Erreur getCategories", { error: err.message });
     res.status(500).json({ message: "Une erreur est survenue" });
