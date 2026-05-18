@@ -287,6 +287,21 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
+exports.getOrderByIdAdmin = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id))
+      return res.status(400).json({ message: "ID invalide" });
+    const order = await Order.findById(req.params.id)
+      .populate("user", "firstName lastName email phone avatar")
+      .populate("shippingZone", "name price");
+    if (!order) return res.status(404).json({ message: "Commande introuvable" });
+    res.json(order);
+  } catch (err) {
+    logger.error("Erreur getOrderByIdAdmin", { error: err.message });
+    res.status(500).json({ message: "Une erreur est survenue" });
+  }
+};
+
 exports.getAllOrdersAdmin = async (req, res) => {
   try {
     const { page, limit, skip } = parsePagination(req.query, 100);
