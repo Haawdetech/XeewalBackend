@@ -2,7 +2,7 @@ const rateLimit = require("express-rate-limit");
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 2000000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Trop de requêtes, veuillez réessayer plus tard." },

@@ -103,8 +103,8 @@ exports.deleteCategory = async (req, res) => {
     if (!isValidObjectId(req.params.id))
       return res.status(400).json({ message: "ID invalide" });
     const count = await Product.countDocuments({ category: req.params.id });
-    if (count > 0) return res.status(400).json({ message: `Cette catégorie contient ${count} produit(s), désactivez-les d'abord` });
-    await Category.findByIdAndUpdate(req.params.id, { isActive: false });
+    if (count > 0) return res.status(400).json({ message: `Cette catégorie contient ${count} produit(s), supprimez-les d'abord` });
+    await Category.findByIdAndDelete(req.params.id);
     logger.info("Catégorie supprimée", { categoryId: req.params.id, adminId: req.user.id });
     res.json({ message: "Catégorie supprimée" });
   } catch (err) {

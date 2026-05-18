@@ -14,6 +14,11 @@
             "date": 1779028553663,
             "name": "/Users/mac/Desktop/SiteVente/backend/logs/error-2026-05-17.log",
             "hash": "04b257fc62a2f5b8f40c5e028e55e43f5d233bf0ae0f0f6bd84ba70d2e34d5f7"
+        },
+        {
+            "date": 1779062569428,
+            "name": "/Users/mac/Desktop/SiteVente/backend/logs/error-2026-05-18.log",
+            "hash": "134d7a368b7865273d04e5fc17b627566823234536c53d0d3135f14b5cc50005"
         }
     ],
     "hashType": "sha256"

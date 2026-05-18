@@ -173,8 +173,8 @@ exports.deleteProduct = async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id))
       return res.status(400).json({ message: "ID invalide" });
-    await Product.findByIdAndUpdate(req.params.id, { isActive: false });
-    logger.info("Produit désactivé", { productId: req.params.id, adminId: req.user.id });
+    await Product.findByIdAndDelete(req.params.id);
+    logger.info("Produit supprimé", { productId: req.params.id, adminId: req.user.id });
     res.json({ message: "Produit supprimé" });
   } catch (err) {
     logger.error("Erreur deleteProduct", { error: err.message });

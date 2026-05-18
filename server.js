@@ -43,7 +43,7 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting global
-app.use(globalLimiter);
+//app.use(globalLimiter);
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
