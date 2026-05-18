@@ -2,6 +2,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const jwt = require("jsonwebtoken");
 const User = require("../Models/User");
+const { getJwtSecret } = require("./VerifyToken");
 
 passport.use(
   new GoogleStrategy(
@@ -35,7 +36,7 @@ passport.use(
         await user.save();
         const token = jwt.sign(
           { id: user._id, role: user.role, email: user.email },
-          process.env.JWT_SECRET,
+          getJwtSecret(),
           { expiresIn: "7d" }
         );
         return done(null, { user, token });
