@@ -218,12 +218,6 @@ exports.googleCallback = (req, res) => {
   const { token, user } = req.user;
   const frontendUrl = process.env.FRONTEND_URL;
   // On passe uniquement le rôle dans l'URL ; le token est dans un cookie httpOnly
-  res.cookie("xeewal_oauth_token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
-  });
   logger.info("OAuth Google callback", { userId: user._id });
-  res.redirect(`${frontendUrl}/auth/google/success?role=${user.role}`);
+  res.redirect(`${frontendUrl}/auth/google/success?token=${token}&role=${user.role}`);
 };
