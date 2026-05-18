@@ -1,7 +1,17 @@
 const rateLimit = require("express-rate-limit");
 const logger = require("../utils/logger");
+const { sendSecurityAlert } = require("../Services/mailer");
 
 const getIp = (req) => req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
+
+// Cooldown : 1 alerte email max par IP par heure
+const alertedIps = new Map();
+const shouldAlert = (ip) => {
+  const last = alertedIps.get(ip);
+  if (last && Date.now() - last < 60 * 60 * 1000) return false;
+  alertedIps.set(ip, Date.now());
+  return true;
+};
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -16,7 +26,12 @@ const authLimiter = rateLimit({
   max: 10,
   message: { message: "Trop de tentatives de connexion, réessayez dans 15 minutes." },
   handler: (req, res) => {
-    logger.warn("Rate limit AUTH dépassé", { ip: getIp(req), path: req.path, body: req.body?.email || "" });
+    const ip = getIp(req);
+    const email = req.body?.email || "";
+    logger.warn("Rate limit AUTH dépassé", { ip, path: req.path, body: email });
+    if (shouldAlert(ip)) {
+      sendSecurityAlert({ ip, path: req.path, email, type: "Brute-force login" }).catch(() => {});
+    }
     res.status(429).json({ message: "Trop de tentatives de connexion, réessayez dans 15 minutes." });
   },
 });

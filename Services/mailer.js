@@ -247,3 +247,26 @@ exports.sendOrderStatusUpdate = (to, firstName, order) => {
     </div>` : ""}
   `));
 };
+
+exports.sendSecurityAlert = ({ ip, path, email, type }) => {
+  const adminEmail = process.env.ADMIN_ALERT_EMAIL || process.env.SMTP_USER;
+  const now = new Date().toLocaleString("fr-FR", { timeZone: "Africa/Dakar" });
+  return createTransport().sendMail({
+    from: FROM,
+    to: adminEmail,
+    subject: `🚨 Alerte sécurité Xeewal — ${type}`,
+    html: base(`
+      <h2 style="color:#991B1B;font-size:18px;margin:0 0 16px">🚨 Tentative suspecte détectée</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr><td style="padding:8px 0;color:#6B7280;width:120px">Type</td><td style="font-weight:600;color:#111">${type}</td></tr>
+        <tr><td style="padding:8px 0;color:#6B7280">IP</td><td style="font-weight:600;color:#DC2626">${ip}</td></tr>
+        <tr><td style="padding:8px 0;color:#6B7280">Email tenté</td><td style="color:#111">${email || "—"}</td></tr>
+        <tr><td style="padding:8px 0;color:#6B7280">Route</td><td style="color:#111">${path}</td></tr>
+        <tr><td style="padding:8px 0;color:#6B7280">Heure</td><td style="color:#111">${now}</td></tr>
+      </table>
+      <div style="background:#FEF2F2;border-radius:10px;padding:14px 18px;margin-top:20px;border:1px solid #FECACA">
+        <p style="margin:0;font-size:13px;color:#991B1B">Le rate limiter a bloqué cette IP. Tu peux la bannir avec : <code>ufw deny from ${ip}</code></p>
+      </div>
+    `),
+  });
+};
