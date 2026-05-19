@@ -92,7 +92,14 @@ exports.createProduct = async (req, res) => {
     if (!Array.isArray(tags) || !Array.isArray(variants))
       return res.status(400).json({ message: "Format tags/variants invalide" });
 
-    const slug = slugify(nameFr, { lower: true, strict: true }) + "-" + Date.now();
+    // Slug SEO-friendly sans timestamp — vérifie l'unicité avec un court suffixe si besoin
+    const baseSlug = slugify(nameFr, { lower: true, strict: true });
+    let slug = baseSlug;
+    let i = 2;
+    while (await Product.exists({ slug })) {
+      slug = `${baseSlug}-${i}`;
+      i++;
+    }
     const images = req.files ? req.files.map((f) => f.location) : [];
 
     const product = await Product.create({
