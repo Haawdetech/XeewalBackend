@@ -4,13 +4,13 @@
  * Dry-run (voir sans modifier) : node scripts/boost-prices.js --dry
  */
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
-const mongoose = require("mongoose");
+const connectDB = require("../Config/DB");
 const Product = require("../Models/Product");
 
 const DRY_RUN = process.argv.includes("--dry");
 const PERCENT = 20;
 
-mongoose.connect(process.env.MONGO_URI).then(async () => {
+connectDB().then(async () => {
   const products = await Product.find({});
   console.log(`\n📦 ${products.length} produits trouvés\n`);
 

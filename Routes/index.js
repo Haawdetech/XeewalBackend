@@ -16,6 +16,7 @@ const reviewCtrl = require("../Controllers/reviewController");
 const couponCtrl = require("../Controllers/couponController");
 const notifCtrl = require("../Controllers/notificationController");
 const adminUserCtrl = require("../Controllers/adminUserController");
+const settingsCtrl = require("../Controllers/settingsController");
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 router.post("/auth/register", authLimiter, authCtrl.register);
@@ -100,5 +101,10 @@ router.delete("/admin/users/:id", authenticateUser, adminRole, adminWriteLimiter
 // ── Notifications ─────────────────────────────────────────────────────────────
 router.get("/notifications", authenticateUser, notifCtrl.getNotifications);
 router.put("/notifications/mark-all-read", authenticateUser, notifCtrl.markAllRead);
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+router.get("/settings", settingsCtrl.getSettings);                                              // public
+router.get("/eligibility", settingsCtrl.checkEligibility);                                      // public (avec ?email=)
+router.put("/admin/settings", authenticateUser, adminRole, adminWriteLimiter, settingsCtrl.updateSettings); // admin
 
 module.exports = router;
