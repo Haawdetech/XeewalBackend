@@ -79,7 +79,8 @@ const getActivePromoForProduct = (product, promotions = []) => {
  */
 const applyPromo = (price, promo) => {
   if (!promo) return price;
-  return Math.round(price * (1 - promo.percent / 100));
+  const raw = price * (1 - promo.percent / 100);
+  return Math.ceil(raw / 100) * 100; // arrondi à la centaine supérieure
 };
 
 module.exports = {
