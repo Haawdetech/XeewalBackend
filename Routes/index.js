@@ -74,6 +74,7 @@ router.get("/orders/:id", authenticateUser, orderCtrl.getOrderById);
 router.get("/admin/orders", authenticateUser, adminRole, orderCtrl.getAllOrdersAdmin);
 router.get("/admin/orders/:id", authenticateUser, adminRole, orderCtrl.getOrderByIdAdmin);
 router.put("/admin/orders/:id/status", authenticateUser, adminRole, adminWriteLimiter, orderCtrl.updateOrderStatus);
+router.put("/admin/orders/:id/payment-status", authenticateUser, adminRole, adminWriteLimiter, orderCtrl.updatePaymentStatus);
 router.get("/admin/stats", authenticateUser, adminRole, orderCtrl.getAdminStats);
 
 // ── Shipping ──────────────────────────────────────────────────────────────────

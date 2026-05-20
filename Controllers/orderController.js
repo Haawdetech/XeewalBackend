@@ -369,6 +369,28 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id))
+      return res.status(400).json({ message: "ID invalide" });
+    const ALLOWED = ["pending", "paid", "failed", "refunded"];
+    const { paymentStatus } = req.body;
+    if (!ALLOWED.includes(paymentStatus))
+      return res.status(400).json({ message: "Statut de paiement invalide" });
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { paymentStatus },
+      { new: true }
+    ).populate("user", "firstName lastName email");
+    if (!order) return res.status(404).json({ message: "Commande introuvable" });
+    logger.info("Statut paiement mis à jour", { orderId: order._id, paymentStatus, adminId: req.user.id });
+    res.json(order);
+  } catch (err) {
+    logger.error("Erreur updatePaymentStatus", { error: err.message });
+    res.status(500).json({ message: "Une erreur est survenue" });
+  }
+};
+
 exports.getAdminStats = async (req, res) => {
   try {
     const [totalOrders, totalRevenue, pendingOrders, totalProducts] = await Promise.all([
