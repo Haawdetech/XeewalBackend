@@ -1,6 +1,8 @@
 const Cart = require("../Models/Cart");
 const Product = require("../Models/Product");
 const Coupon = require("../Models/Coupon");
+const Settings = require("../Models/Settings");
+const { applyPriceBoost } = require("../utils/pricing");
 
 exports.getCart = async (req, res) => {
   try {
@@ -27,10 +29,15 @@ exports.addToCart = async (req, res) => {
     const existingIdx = cart.items.findIndex(
       (i) => i.product.toString() === productId && JSON.stringify(i.selectedVariants) === JSON.stringify(selectedVariants)
     );
+    // Appliquer la majoration de prix si active
+    const settings = await Settings.getSettings();
+    const finalPrice = applyPriceBoost(product.price, settings);
+
     if (existingIdx > -1) {
       cart.items[existingIdx].quantity += Number(quantity);
+      cart.items[existingIdx].price = finalPrice; // Mettre à jour le prix si les settings ont changé
     } else {
-      cart.items.push({ product: productId, quantity: Number(quantity), selectedVariants, price: product.price });
+      cart.items.push({ product: productId, quantity: Number(quantity), selectedVariants, price: finalPrice });
     }
     await cart.save();
     res.json({ message: "Produit ajouté au panier" });
