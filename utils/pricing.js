@@ -60,7 +60,8 @@ const checkNewCustomerEligibility = async (userId, email, settings) => {
  */
 const calcNewCustomerDiscount = (subtotal, settings) => {
   if (!settings?.newCustomerDiscount?.active) return 0;
-  return Math.round((subtotal * settings.newCustomerDiscount.percent) / 100);
+  const raw = (subtotal * settings.newCustomerDiscount.percent) / 100;
+  return Math.round(raw / 100) * 100; // arrondi à la centaine FCFA
 };
 
 module.exports = { applyPriceBoost, checkNewCustomerEligibility, calcNewCustomerDiscount };
