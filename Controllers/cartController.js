@@ -1,6 +1,8 @@
 const Cart = require("../Models/Cart");
 const Product = require("../Models/Product");
 const Coupon = require("../Models/Coupon");
+const Promotion = require("../Models/Promotion");
+const { getActivePromoForProduct, applyPromo } = require("../utils/pricing");
 
 exports.getCart = async (req, res) => {
   try {
@@ -21,6 +23,11 @@ exports.addToCart = async (req, res) => {
     if (!product || !product.isActive) return res.status(404).json({ message: "Produit introuvable" });
     if (product.stock < quantity) return res.status(400).json({ message: "Stock insuffisant" });
 
+    // Appliquer la promo active si elle existe
+    const activePromos = await Promotion.getActive();
+    const promo = getActivePromoForProduct(product, activePromos);
+    const price = applyPromo(product.price, promo);
+
     let cart = await Cart.findOne({ user: req.user.id });
     if (!cart) cart = new Cart({ user: req.user.id, items: [] });
 
@@ -29,8 +36,9 @@ exports.addToCart = async (req, res) => {
     );
     if (existingIdx > -1) {
       cart.items[existingIdx].quantity += Number(quantity);
+      cart.items[existingIdx].price = price; // maj prix si promo change
     } else {
-      cart.items.push({ product: productId, quantity: Number(quantity), selectedVariants, price: product.price });
+      cart.items.push({ product: productId, quantity: Number(quantity), selectedVariants, price });
     }
     await cart.save();
     res.json({ message: "Produit ajouté au panier" });

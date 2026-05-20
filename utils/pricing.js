@@ -63,4 +63,29 @@ const calcNewCustomerDiscount = (subtotal, settings) => {
   return Math.round((subtotal * settings.newCustomerDiscount.percent) / 100);
 };
 
-module.exports = { applyPriceBoost, checkNewCustomerEligibility, calcNewCustomerDiscount };
+/**
+ * Trouve la promo applicable pour un produit parmi une liste de promos actives.
+ * Priorité : global > catégorie
+ */
+const getActivePromoForProduct = (product, promotions = []) => {
+  const global = promotions.find(p => p.type === "global");
+  if (global) return global;
+  const catId = (product.category?._id || product.category)?.toString();
+  return promotions.find(p => p.type === "category" && p.categoryId?.toString() === catId) || null;
+};
+
+/**
+ * Applique une promo sur un prix
+ */
+const applyPromo = (price, promo) => {
+  if (!promo) return price;
+  return Math.round(price * (1 - promo.percent / 100));
+};
+
+module.exports = {
+  applyPriceBoost,
+  checkNewCustomerEligibility,
+  calcNewCustomerDiscount,
+  getActivePromoForProduct,
+  applyPromo,
+};

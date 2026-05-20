@@ -10,7 +10,8 @@ const mailer = require("../Services/mailer");
 const User = require("../Models/User");
 const logger = require("../utils/logger");
 const { isValidObjectId, parsePagination, safeRegex, isValidEmail, isValidPhone } = require("../utils/validate");
-const { applyPriceBoost } = require("../utils/pricing");
+const Promotion = require("../Models/Promotion");
+const { applyPriceBoost, getActivePromoForProduct, applyPromo } = require("../utils/pricing");
 
 const ALLOWED_PAYMENT_METHODS = ["paydunya", "cash_on_delivery"];
 
@@ -125,6 +126,7 @@ exports.createGuestOrder = async (req, res) => {
       return res.status(400).json({ message: "Trop d'articles dans le panier" });
 
     const settings = await Settings.getSettings();
+    const activePromos = await Promotion.getActive();
 
     let orderItems = [];
     let subtotal = 0;
@@ -135,7 +137,8 @@ exports.createGuestOrder = async (req, res) => {
       const product = await Product.findById(item.productId);
       if (!product || !product.isActive) return res.status(404).json({ message: "Produit introuvable" });
       if (product.stock < qty) return res.status(400).json({ message: `Stock insuffisant pour ${product.name.fr}` });
-      const price = product.price;
+      const promo = getActivePromoForProduct(product, activePromos);
+      const price = applyPromo(product.price, promo);
       subtotal += price * qty;
       orderItems.push({
         product: product._id,

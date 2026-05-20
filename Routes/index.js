@@ -17,6 +17,7 @@ const couponCtrl = require("../Controllers/couponController");
 const notifCtrl = require("../Controllers/notificationController");
 const adminUserCtrl = require("../Controllers/adminUserController");
 const settingsCtrl = require("../Controllers/settingsController");
+const promoCtrl = require("../Controllers/promotionController");
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 router.post("/auth/register", authLimiter, authCtrl.register);
@@ -104,7 +105,12 @@ router.get("/notifications", authenticateUser, notifCtrl.getNotifications);
 router.put("/notifications/mark-all-read", authenticateUser, notifCtrl.markAllRead);
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-router.get("/settings", settingsCtrl.getSettings);                                              // public
+router.get("/settings", settingsCtrl.getSettings);
+router.get("/promotions/active", promoCtrl.getActive);
+router.get("/admin/promotions", authenticateUser, adminRole, promoCtrl.getAll);
+router.post("/admin/promotions", authenticateUser, adminRole, adminWriteLimiter, promoCtrl.create);
+router.put("/admin/promotions/:id", authenticateUser, adminRole, adminWriteLimiter, promoCtrl.update);
+router.delete("/admin/promotions/:id", authenticateUser, adminRole, adminWriteLimiter, promoCtrl.remove);                                              // public
 router.get("/eligibility", optionalAuth, settingsCtrl.checkEligibility);                        // public + optionalAuth pour identifier l'utilisateur connecté
 router.put("/admin/settings", authenticateUser, adminRole, adminWriteLimiter, settingsCtrl.updateSettings); // admin
 
