@@ -142,7 +142,8 @@ exports.sendOrderConfirmation = (to, firstName, order) => {
         ${items}
         <tr><td colspan="3" style="padding:8px 0"></td></tr>
         ${order.shippingCost > 0 ? `<tr><td colspan="2" style="text-align:right;color:#6B6B6B;font-size:13px">Livraison</td><td style="text-align:right">${formatPrice(order.shippingCost)}</td></tr>` : `<tr><td colspan="2" style="text-align:right;color:#10B981;font-size:13px">Livraison</td><td style="text-align:right;color:#10B981">Gratuite</td></tr>`}
-        ${order.couponDiscount > 0 ? `<tr><td colspan="2" style="text-align:right;color:#C8A55A;font-size:13px">Réduction</td><td style="text-align:right;color:#C8A55A">−${formatPrice(order.couponDiscount)}</td></tr>` : ""}
+        ${order.couponDiscount > 0 ? `<tr><td colspan="2" style="text-align:right;color:#C8A55A;font-size:13px">Réduction coupon</td><td style="text-align:right;color:#C8A55A">−${formatPrice(order.couponDiscount)}</td></tr>` : ""}
+        ${order.newCustomerDiscount > 0 ? `<tr><td colspan="2" style="text-align:right;color:#10B981;font-size:13px">🎁 Réduction nouveau client</td><td style="text-align:right;color:#10B981">−${formatPrice(order.newCustomerDiscount)}</td></tr>` : ""}
         <tr class="total-row"><td colspan="2" style="text-align:right">Total</td><td style="text-align:right">${formatPrice(order.total)}</td></tr>
       </tbody>
     </table>

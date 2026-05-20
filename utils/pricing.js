@@ -25,17 +25,12 @@ const checkNewCustomerEligibility = async (userId, email, settings) => {
   const maxOrders = settings.newCustomerDiscount.maxOrders || 3;
   let ordersCount = 0;
 
-  // On ne compte que les commandes réellement honorées :
-  // paymentStatus "paid" OU status "delivered"
-  const completedFilter = {
-    $or: [{ paymentStatus: "paid" }, { status: "delivered" }],
-  };
+  // On exclut uniquement les commandes annulées
+  // (les commandes cash-on-delivery sont pending jusqu'à livraison → elles comptent quand même)
+  const notCancelled = { status: { $ne: "cancelled" } };
 
   if (userId) {
-    ordersCount = await Order.countDocuments({
-      user: userId,
-      ...completedFilter,
-    });
+    ordersCount = await Order.countDocuments({ user: userId, ...notCancelled });
   } else if (email) {
     ordersCount = await Order.countDocuments({
       $and: [
@@ -45,7 +40,7 @@ const checkNewCustomerEligibility = async (userId, email, settings) => {
             { guestEmail: email.toLowerCase() },
           ],
         },
-        completedFilter,
+        notCancelled,
       ],
     });
   }
