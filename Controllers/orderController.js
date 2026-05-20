@@ -10,7 +10,7 @@ const mailer = require("../Services/mailer");
 const User = require("../Models/User");
 const logger = require("../utils/logger");
 const { isValidObjectId, parsePagination, safeRegex, isValidEmail, isValidPhone } = require("../utils/validate");
-const { applyPriceBoost, checkNewCustomerEligibility, calcNewCustomerDiscount } = require("../utils/pricing");
+const { applyPriceBoost } = require("../utils/pricing");
 
 const ALLOWED_PAYMENT_METHODS = ["paydunya", "cash_on_delivery"];
 
@@ -33,11 +33,7 @@ exports.createOrder = async (req, res) => {
     const subtotal = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingCost = subtotal >= shipping.isFreeAbove && shipping.isFreeAbove > 0 ? 0 : shipping.price;
 
-    // Réduction nouveaux clients
-    const eligibility = await checkNewCustomerEligibility(req.user.id, req.user.email, settings);
-    const newCustomerDiscount = eligibility.eligible ? calcNewCustomerDiscount(subtotal, settings) : 0;
-    const totalDiscount = (cart.couponDiscount || 0) + newCustomerDiscount;
-    const total = subtotal - totalDiscount + shippingCost;
+    const total = subtotal - (cart.couponDiscount || 0) + shippingCost;
 
     const items = cart.items.map((i) => ({
       product: i.product._id,
@@ -56,7 +52,6 @@ exports.createOrder = async (req, res) => {
       shippingCost,
       subtotal,
       couponDiscount: cart.couponDiscount || 0,
-      newCustomerDiscount,
       total,
       paymentMethod,
       notes: (notes || "").slice(0, 500),
@@ -118,7 +113,7 @@ exports.createGuestOrder = async (req, res) => {
 
     // Validation des champs obligatoires
     if (!firstName || !lastName) return res.status(400).json({ message: "Prénom et nom requis" });
-    if (!email || !isValidEmail(email)) return res.status(400).json({ message: "Email invalide" });
+    if (email && !isValidEmail(email)) return res.status(400).json({ message: "Email invalide" });
     if (!phone || !isValidPhone(phone)) return res.status(400).json({ message: "Téléphone invalide" });
     if (!ALLOWED_PAYMENT_METHODS.includes(paymentMethod))
       return res.status(400).json({ message: "Méthode de paiement invalide" });
@@ -156,11 +151,6 @@ exports.createGuestOrder = async (req, res) => {
     if (!shipping) return res.status(404).json({ message: "Zone de livraison introuvable" });
     const shippingCost = subtotal >= shipping.isFreeAbove && shipping.isFreeAbove > 0 ? 0 : shipping.price;
 
-    // Réduction nouveaux clients (guest)
-    const guestEmail = String(email).toLowerCase().trim();
-    const eligibility = await checkNewCustomerEligibility(null, guestEmail, settings);
-    const newCustomerDiscount = eligibility.eligible ? calcNewCustomerDiscount(subtotal, settings) : 0;
-
     let couponDiscount = 0;
     let couponId = null;
     if (couponCode) {
@@ -177,13 +167,13 @@ exports.createGuestOrder = async (req, res) => {
       }
     }
 
-    const total = subtotal - couponDiscount - newCustomerDiscount + shippingCost;
+    const total = subtotal - couponDiscount + shippingCost;
 
     const order = await Order.create({
       guestInfo: {
         firstName: String(firstName).slice(0, 100),
         lastName: String(lastName).slice(0, 100),
-        email: String(email).toLowerCase().trim(),
+        email: email ? String(email).toLowerCase().trim() : "",
         phone: String(phone).slice(0, 20),
       },
       items: orderItems,
@@ -198,7 +188,6 @@ exports.createGuestOrder = async (req, res) => {
       shippingCost,
       subtotal,
       couponDiscount,
-      newCustomerDiscount,
       total,
       paymentMethod,
       notes: (notes || "").slice(0, 500),
@@ -217,8 +206,8 @@ exports.createGuestOrder = async (req, res) => {
         const invoice = await paydunya.createOrderInvoice(order, guestUser);
         order.invoiceToken = invoice.token;
         await order.save();
-        mailer.sendOrderConfirmation(email, firstName, order);
-        mailer.sendAdminNewOrder(order, `${firstName} ${lastName}`, email);
+        if (email) mailer.sendOrderConfirmation(email, firstName, order);
+        mailer.sendAdminNewOrder(order, `${firstName} ${lastName}`, email || "");
         logger.info("Commande guest PayDunya créée", { orderId: order._id, email });
         return res.status(201).json({ order, paymentUrl: invoice.url });
       } catch (payErr) {
@@ -227,8 +216,8 @@ exports.createGuestOrder = async (req, res) => {
       }
     }
 
-    mailer.sendOrderConfirmation(email, firstName, order);
-    mailer.sendAdminNewOrder(order, `${firstName} ${lastName}`, email);
+    if (email) mailer.sendOrderConfirmation(email, firstName, order);
+    mailer.sendAdminNewOrder(order, `${firstName} ${lastName}`, email || "");
     logger.info("Commande guest COD créée", { orderId: order._id, email });
     res.status(201).json({ order });
   } catch (err) {
