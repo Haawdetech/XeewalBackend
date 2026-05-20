@@ -36,6 +36,7 @@ const orderSchema = new mongoose.Schema(
     shippingCost: { type: Number, default: 0 },
     subtotal: { type: Number, required: true },
     couponDiscount: { type: Number, default: 0 },
+    newCustomerDiscount: { type: Number, default: 0 },
     total: { type: Number, required: true },
     status: {
       type: String,

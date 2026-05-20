@@ -4,11 +4,13 @@ const Product = require("../Models/Product");
 const Coupon = require("../Models/Coupon");
 const Shipping = require("../Models/Shipping");
 const Notification = require("../Models/Notification");
+const Settings = require("../Models/Settings");
 const paydunya = require("../Services/paydunya");
 const mailer = require("../Services/mailer");
 const User = require("../Models/User");
 const logger = require("../utils/logger");
 const { isValidObjectId, parsePagination, safeRegex, isValidEmail, isValidPhone } = require("../utils/validate");
+const { applyPriceBoost, checkNewCustomerEligibility, calcNewCustomerDiscount } = require("../utils/pricing");
 
 const ALLOWED_PAYMENT_METHODS = ["paydunya", "cash_on_delivery"];
 
@@ -27,9 +29,15 @@ exports.createOrder = async (req, res) => {
     const shipping = await Shipping.findById(shippingZoneId);
     if (!shipping) return res.status(404).json({ message: "Zone de livraison introuvable" });
 
+    const settings = await Settings.getSettings();
     const subtotal = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const shippingCost = subtotal >= shipping.isFreeAbove && shipping.isFreeAbove > 0 ? 0 : shipping.price;
-    const total = subtotal - (cart.couponDiscount || 0) + shippingCost;
+
+    // Réduction nouveaux clients
+    const eligibility = await checkNewCustomerEligibility(req.user.id, req.user.email, settings);
+    const newCustomerDiscount = eligibility.eligible ? calcNewCustomerDiscount(subtotal, settings) : 0;
+    const totalDiscount = (cart.couponDiscount || 0) + newCustomerDiscount;
+    const total = subtotal - totalDiscount + shippingCost;
 
     const items = cart.items.map((i) => ({
       product: i.product._id,
@@ -48,6 +56,7 @@ exports.createOrder = async (req, res) => {
       shippingCost,
       subtotal,
       couponDiscount: cart.couponDiscount || 0,
+      newCustomerDiscount,
       total,
       paymentMethod,
       notes: (notes || "").slice(0, 500),
@@ -120,6 +129,8 @@ exports.createGuestOrder = async (req, res) => {
     if (items.length > 50)
       return res.status(400).json({ message: "Trop d'articles dans le panier" });
 
+    const settings = await Settings.getSettings();
+
     let orderItems = [];
     let subtotal = 0;
     for (const item of items) {
@@ -129,7 +140,8 @@ exports.createGuestOrder = async (req, res) => {
       const product = await Product.findById(item.productId);
       if (!product || !product.isActive) return res.status(404).json({ message: "Produit introuvable" });
       if (product.stock < qty) return res.status(400).json({ message: `Stock insuffisant pour ${product.name.fr}` });
-      const price = product.price;
+      // Appliquer la majoration de prix si active
+      const price = applyPriceBoost(product.price, settings);
       subtotal += price * qty;
       orderItems.push({
         product: product._id,
@@ -144,6 +156,11 @@ exports.createGuestOrder = async (req, res) => {
     const shipping = await Shipping.findById(shippingZoneId);
     if (!shipping) return res.status(404).json({ message: "Zone de livraison introuvable" });
     const shippingCost = subtotal >= shipping.isFreeAbove && shipping.isFreeAbove > 0 ? 0 : shipping.price;
+
+    // Réduction nouveaux clients (guest)
+    const guestEmail = String(email).toLowerCase().trim();
+    const eligibility = await checkNewCustomerEligibility(null, guestEmail, settings);
+    const newCustomerDiscount = eligibility.eligible ? calcNewCustomerDiscount(subtotal, settings) : 0;
 
     let couponDiscount = 0;
     let couponId = null;
@@ -161,7 +178,7 @@ exports.createGuestOrder = async (req, res) => {
       }
     }
 
-    const total = subtotal - couponDiscount + shippingCost;
+    const total = subtotal - couponDiscount - newCustomerDiscount + shippingCost;
 
     const order = await Order.create({
       guestInfo: {
@@ -182,6 +199,7 @@ exports.createGuestOrder = async (req, res) => {
       shippingCost,
       subtotal,
       couponDiscount,
+      newCustomerDiscount,
       total,
       paymentMethod,
       notes: (notes || "").slice(0, 500),
