@@ -25,13 +25,27 @@ const checkNewCustomerEligibility = async (userId, email, settings) => {
   const maxOrders = settings.newCustomerDiscount.maxOrders || 3;
   let ordersCount = 0;
 
+  // On ne compte que les commandes réellement honorées :
+  // paymentStatus "paid" OU status "delivered"
+  const completedFilter = {
+    $or: [{ paymentStatus: "paid" }, { status: "delivered" }],
+  };
+
   if (userId) {
-    ordersCount = await Order.countDocuments({ user: userId });
+    ordersCount = await Order.countDocuments({
+      user: userId,
+      ...completedFilter,
+    });
   } else if (email) {
     ordersCount = await Order.countDocuments({
-      $or: [
-        { "guestInfo.email": email.toLowerCase() },
-        { guestEmail: email.toLowerCase() },
+      $and: [
+        {
+          $or: [
+            { "guestInfo.email": email.toLowerCase() },
+            { guestEmail: email.toLowerCase() },
+          ],
+        },
+        completedFilter,
       ],
     });
   }
