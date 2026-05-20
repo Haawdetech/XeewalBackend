@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { authenticateUser, adminRole } = require("../Middlewares/VerifyToken");
+const { authenticateUser, adminRole, optionalAuth } = require("../Middlewares/VerifyToken");
 const { authLimiter, paymentLimiter, ipnLimiter, searchLimiter, couponLimiter, adminWriteLimiter, resetLimiter } = require("../Middlewares/rateLimiter");
 const { uploadProduct, uploadCategory, uploadAvatar } = require("../Middlewares/uploadS3");
 const passport = require("../Middlewares/googlePassport");
@@ -105,7 +105,7 @@ router.put("/notifications/mark-all-read", authenticateUser, notifCtrl.markAllRe
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 router.get("/settings", settingsCtrl.getSettings);                                              // public
-router.get("/eligibility", settingsCtrl.checkEligibility);                                      // public (avec ?email=)
+router.get("/eligibility", optionalAuth, settingsCtrl.checkEligibility);                        // public + optionalAuth pour identifier l'utilisateur connecté
 router.put("/admin/settings", authenticateUser, adminRole, adminWriteLimiter, settingsCtrl.updateSettings); // admin
 
 module.exports = router;
