@@ -140,8 +140,7 @@ exports.createGuestOrder = async (req, res) => {
       const product = await Product.findById(item.productId);
       if (!product || !product.isActive) return res.status(404).json({ message: "Produit introuvable" });
       if (product.stock < qty) return res.status(400).json({ message: `Stock insuffisant pour ${product.name.fr}` });
-      // Appliquer la majoration de prix si active
-      const price = applyPriceBoost(product.price, settings);
+      const price = product.price;
       subtotal += price * qty;
       orderItems.push({
         product: product._id,
